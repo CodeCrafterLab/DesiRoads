@@ -1,79 +1,116 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Get the canvas and set up the context
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 400;
+canvas.height = 600;
 
-// Game objects
-const roadWidth = canvas.width / 3;
-const car = { x: canvas.width / 2 - 25, y: canvas.height - 80, width: 50, height: 100, speed: 0, maxSpeed: 5 };
-const obstacles = [];
-const trees = [];
-const mountains = [];
+// Game variables
+let carX = canvas.width / 2 - 20;
+let carY = canvas.height - 70;
+const carWidth = 40;
+const carHeight = 70;
+const laneWidth = 100;
+const roadSpeed = 5;
+let roadOffset = 0;
 
 // Controls
-const controls = { left: false, right: false };
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") controls.left = true;
-  if (e.key === "ArrowRight") controls.right = true;
+let controls = {
+  left: false,
+  right: false,
+};
+
+// Scenery objects
+let trees = [];
+let mountains = [];
+
+// Event listeners for controls
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') controls.left = true;
+  if (e.key === 'ArrowRight') controls.right = true;
 });
-document.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowLeft") controls.left = false;
-  if (e.key === "ArrowRight") controls.right = false;
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowLeft') controls.left = false;
+  if (e.key === 'ArrowRight') controls.right = false;
 });
 
-// Initialize trees and mountains
-for (let i = 0; i < 5; i++) {
-  trees.push({ x: Math.random() * canvas.width / 2 - 100, y: Math.random() * canvas.height });
-  trees.push({ x: canvas.width - Math.random() * canvas.width / 2 + 100, y: Math.random() * canvas.height });
-  mountains.push({ x: Math.random() * canvas.width / 2 - 150, y: Math.random() * canvas.height });
-  mountains.push({ x: canvas.width - Math.random() * canvas.width / 2 + 150, y: Math.random() * canvas.height });
-}
-
-// Main game loop
-function gameLoop() {
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-// Update game logic
-function update() {
-  // Move car based on controls
-  if (controls.left && car.x > canvas.width / 2 - roadWidth / 2) car.x -= car.maxSpeed;
-  if (controls.right && car.x < canvas.width / 2 + roadWidth / 2 - car.width) car.x += car.maxSpeed;
-
-  // Move obstacles and reset if off-screen
-  obstacles.forEach(obstacle => {
-    obstacle.y += car.maxSpeed;
-    if (obstacle.y > canvas.height) {
-      obstacle.y = -Math.random() * canvas.height;
-      obstacle.x = canvas.width / 2 - roadWidth / 2 + Math.random() * roadWidth;
-    }
-  });
-
-  // Move trees and mountains down
-  trees.forEach(tree => {
-    tree.y += car.maxSpeed * 0.5;
-    if (tree.y > canvas.height) tree.y = -Math.random() * canvas.height;
-  });
-  mountains.forEach(mountain => {
-    mountain.y += car.maxSpeed * 0.2;
-    if (mountain.y > canvas.height) mountain.y = -Math.random() * canvas.height;
-  });
-
-  // Generate new obstacles
+// Create trees and mountains randomly
+function generateScenery() {
   if (Math.random() < 0.05) {
-    obstacles.push({
-      x: canvas.width / 2 - roadWidth / 2 + Math.random() * roadWidth,
-      y: -100,
-      width: 50,
-      height: 100
-    });
+    trees.push({ x: Math.random() * (canvas.width - 100) + 50, y: -50 });
+  }
+  if (Math.random() < 0.02) {
+    mountains.push({ x: Math.random() < 0.5 ? -50 : canvas.width - 150, y: -100 });
   }
 }
 
-// Draw everything
-function draw() {
+// Draw road
+function drawRoad() {
+  ctx.fillStyle = "#555"; // Gray road
+  ctx.fillRect(100, 0, laneWidth * 2, canvas.height);
+  
+  // Draw center line
+  ctx.strokeStyle = "#FFF";
+  ctx.lineWidth = 5;
+  ctx.setLineDash([20, 20]);
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2, roadOffset % 40 - 40);
+  ctx.lineTo(canvas.width / 2, canvas.height);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Draw scenery
+function drawScenery() {
+  ctx.fillStyle = "green";
+  trees.forEach((tree) => {
+    ctx.beginPath();
+    ctx.arc(tree.x, tree.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    tree.y += roadSpeed - 1; // Move tree down
+  });
+  trees = trees.filter(tree => tree.y < canvas.height); // Remove trees out of view
+
+  ctx.fillStyle = "#8B4513"; // Brown color for mountains
+  mountains.forEach((mountain) => {
+    ctx.beginPath();
+    ctx.moveTo(mountain.x, mountain.y);
+    ctx.lineTo(mountain.x + 100, mountain.y);
+    ctx.lineTo(mountain.x + 50, mountain.y - 50);
+    ctx.closePath();
+    ctx.fill();
+    mountain.y += roadSpeed - 2; // Move mountain down
+  });
+  mountains = mountains.filter(mountain => mountain.y < canvas.height); // Remove mountains out of view
+}
+
+// Draw car
+function drawCar() {
+  ctx.fillStyle = "red";
+  ctx.fillRect(carX, carY, carWidth, carHeight);
+}
+
+// Update car position
+function updateCar() {
+  if (controls.left && carX > 100) {
+    carX -= 5;
+  }
+  if (controls.right && carX < canvas.width - 100 - carWidth) {
+    carX += 5;
+  }
+}
+
+// Game loop
+function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw road
+  roadOffset += roadSpeed;
+  drawRoad();
+  generateScenery();
+  drawScenery();
+  updateCar();
+  drawCar();
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
