@@ -1,103 +1,79 @@
-// Set up the basic scene, camera, and renderer
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-// Position the camera
-camera.position.z = 5;
-camera.position.y = 2;
+// Game objects
+const roadWidth = canvas.width / 3;
+const car = { x: canvas.width / 2 - 25, y: canvas.height - 80, width: 50, height: 100, speed: 0, maxSpeed: 5 };
+const obstacles = [];
+const trees = [];
+const mountains = [];
 
-// Add lighting to the scene
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(10, 10, 10).normalize();
-scene.add(light);
-
-// Create road
-const roadWidth = 2;
-const roadLength = 50;
-const roadGeometry = new THREE.PlaneGeometry(roadWidth, roadLength);
-const roadMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
-const road = new THREE.Mesh(roadGeometry, roadMaterial);
-road.rotation.x = -Math.PI / 2; // Make the road horizontal
-road.position.z = -roadLength / 2;
-scene.add(road);
-
-// Create a car
-const carGeometry = new THREE.BoxGeometry(0.5, 0.2, 1);
-const carMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-const car = new THREE.Mesh(carGeometry, carMaterial);
-car.position.y = 0.15;
-scene.add(car);
-
-// Car controls
-const controls = {
-  forward: false,
-  backward: false,
-  left: false,
-  right: false
-};
-
-document.addEventListener('keydown', (e) => {
-  switch (e.key) {
-    case 'ArrowUp': controls.forward = true; break;
-    case 'ArrowDown': controls.backward = true; break;
-    case 'ArrowLeft': controls.left = true; break;
-    case 'ArrowRight': controls.right = true; break;
-  }
+// Controls
+const controls = { left: false, right: false };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") controls.left = true;
+  if (e.key === "ArrowRight") controls.right = true;
+});
+document.addEventListener("keyup", (e) => {
+  if (e.key === "ArrowLeft") controls.left = false;
+  if (e.key === "ArrowRight") controls.right = false;
 });
 
-document.addEventListener('keyup', (e) => {
-  switch (e.key) {
-    case 'ArrowUp': controls.forward = false; break;
-    case 'ArrowDown': controls.backward = false; break;
-    case 'ArrowLeft': controls.left = false; break;
-    case 'ArrowRight': controls.right = false; break;
-  }
-});
-
-// Game variables
-let speed = 0.05;
-let carVelocity = 0;
-const maxSpeed = 0.2;
-const acceleration = 0.005;
-const friction = 0.98;
-
-// Animate the game
-function animate() {
-  requestAnimationFrame(animate);
-
-  // Update car speed
-  if (controls.forward) carVelocity = Math.min(carVelocity + acceleration, maxSpeed);
-  if (controls.backward) carVelocity = Math.max(carVelocity - acceleration, -maxSpeed);
-  carVelocity *= friction;
-
-  // Update car position
-  car.position.z -= carVelocity;
-
-  // Road Reset (Endless effect)
-  if (car.position.z < road.position.z + roadLength / 2) {
-    car.position.z += roadLength;
-  }
-
-  // Update car steering
-  if (controls.left) car.position.x -= speed;
-  if (controls.right) car.position.x += speed;
-
-  // Camera follows car
-  camera.position.z = car.position.z + 5;
-  camera.lookAt(car.position);
-
-  // Render the scene
-  renderer.render(scene, camera);
+// Initialize trees and mountains
+for (let i = 0; i < 5; i++) {
+  trees.push({ x: Math.random() * canvas.width / 2 - 100, y: Math.random() * canvas.height });
+  trees.push({ x: canvas.width - Math.random() * canvas.width / 2 + 100, y: Math.random() * canvas.height });
+  mountains.push({ x: Math.random() * canvas.width / 2 - 150, y: Math.random() * canvas.height });
+  mountains.push({ x: canvas.width - Math.random() * canvas.width / 2 + 150, y: Math.random() * canvas.height });
 }
 
-animate();
+// Main game loop
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
 
-// Resize handling
-window.addEventListener('resize', () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-});
+// Update game logic
+function update() {
+  // Move car based on controls
+  if (controls.left && car.x > canvas.width / 2 - roadWidth / 2) car.x -= car.maxSpeed;
+  if (controls.right && car.x < canvas.width / 2 + roadWidth / 2 - car.width) car.x += car.maxSpeed;
+
+  // Move obstacles and reset if off-screen
+  obstacles.forEach(obstacle => {
+    obstacle.y += car.maxSpeed;
+    if (obstacle.y > canvas.height) {
+      obstacle.y = -Math.random() * canvas.height;
+      obstacle.x = canvas.width / 2 - roadWidth / 2 + Math.random() * roadWidth;
+    }
+  });
+
+  // Move trees and mountains down
+  trees.forEach(tree => {
+    tree.y += car.maxSpeed * 0.5;
+    if (tree.y > canvas.height) tree.y = -Math.random() * canvas.height;
+  });
+  mountains.forEach(mountain => {
+    mountain.y += car.maxSpeed * 0.2;
+    if (mountain.y > canvas.height) mountain.y = -Math.random() * canvas.height;
+  });
+
+  // Generate new obstacles
+  if (Math.random() < 0.05) {
+    obstacles.push({
+      x: canvas.width / 2 - roadWidth / 2 + Math.random() * roadWidth,
+      y: -100,
+      width: 50,
+      height: 100
+    });
+  }
+}
+
+// Draw everything
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw road
