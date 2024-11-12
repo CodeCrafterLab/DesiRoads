@@ -1,15 +1,22 @@
 // Get the canvas and set up the context
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 400;
-canvas.height = 600;
+
+// Resize canvas to full screen
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Game variables
 let carX = canvas.width / 2 - 20;
-let carY = canvas.height - 70;
+let carY = canvas.height - 100;
 const carWidth = 40;
 const carHeight = 70;
-const laneWidth = 100;
+const roadWidth = 200;
+const laneWidth = roadWidth / 2;
 const roadSpeed = 5;
 let roadOffset = 0;
 
@@ -36,18 +43,19 @@ document.addEventListener('keyup', (e) => {
 // Create trees and mountains randomly
 function generateScenery() {
   if (Math.random() < 0.05) {
-    trees.push({ x: Math.random() * (canvas.width - 100) + 50, y: -50 });
+    trees.push({ x: Math.random() * (canvas.width - roadWidth) + roadWidth / 2, y: -50 });
   }
   if (Math.random() < 0.02) {
-    mountains.push({ x: Math.random() < 0.5 ? -50 : canvas.width - 150, y: -100 });
+    mountains.push({ x: Math.random() < 0.5 ? 50 : canvas.width - 150, y: -100 });
   }
 }
 
 // Draw road
 function drawRoad() {
   ctx.fillStyle = "#555"; // Gray road
-  ctx.fillRect(100, 0, laneWidth * 2, canvas.height);
-  
+  const roadX = canvas.width / 2 - roadWidth / 2;
+  ctx.fillRect(roadX, 0, roadWidth, canvas.height);
+
   // Draw center line
   ctx.strokeStyle = "#FFF";
   ctx.lineWidth = 5;
@@ -91,10 +99,11 @@ function drawCar() {
 
 // Update car position
 function updateCar() {
-  if (controls.left && carX > 100) {
+  const roadX = canvas.width / 2 - roadWidth / 2;
+  if (controls.left && carX > roadX) {
     carX -= 5;
   }
-  if (controls.right && carX < canvas.width - 100 - carWidth) {
+  if (controls.right && carX < roadX + roadWidth - carWidth) {
     carX += 5;
   }
 }
