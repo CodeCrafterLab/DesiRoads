@@ -19,6 +19,8 @@ const roadWidth = 200;
 const laneWidth = roadWidth / 2;
 const roadSpeed = 5;
 let roadOffset = 0;
+let roadCurve = 0; // Current curvature of the road
+let curveDirection = 1; // 1 for right, -1 for left
 
 // Controls
 let controls = {
@@ -50,10 +52,10 @@ function generateScenery() {
   }
 }
 
-// Draw road
+// Draw road with curvature
 function drawRoad() {
   ctx.fillStyle = "#555"; // Gray road
-  const roadX = canvas.width / 2 - roadWidth / 2;
+  const roadX = (canvas.width / 2 - roadWidth / 2) + roadCurve; // Offset road position based on curvature
   ctx.fillRect(roadX, 0, roadWidth, canvas.height);
 
   // Draw center line
@@ -61,8 +63,8 @@ function drawRoad() {
   ctx.lineWidth = 5;
   ctx.setLineDash([20, 20]);
   ctx.beginPath();
-  ctx.moveTo(canvas.width / 2, roadOffset % 40 - 40);
-  ctx.lineTo(canvas.width / 2, canvas.height);
+  ctx.moveTo(roadX + roadWidth / 2, roadOffset % 40 - 40);
+  ctx.lineTo(roadX + roadWidth / 2, canvas.height);
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -72,7 +74,7 @@ function drawScenery() {
   ctx.fillStyle = "green";
   trees.forEach((tree) => {
     ctx.beginPath();
-    ctx.arc(tree.x, tree.y, 10, 0, Math.PI * 2);
+    ctx.arc(tree.x + roadCurve / 2, tree.y, 10, 0, Math.PI * 2);
     ctx.fill();
     tree.y += roadSpeed - 1; // Move tree down
   });
@@ -81,9 +83,9 @@ function drawScenery() {
   ctx.fillStyle = "#8B4513"; // Brown color for mountains
   mountains.forEach((mountain) => {
     ctx.beginPath();
-    ctx.moveTo(mountain.x, mountain.y);
-    ctx.lineTo(mountain.x + 100, mountain.y);
-    ctx.lineTo(mountain.x + 50, mountain.y - 50);
+    ctx.moveTo(mountain.x + roadCurve / 2, mountain.y);
+    ctx.lineTo(mountain.x + roadCurve / 2 + 100, mountain.y);
+    ctx.lineTo(mountain.x + roadCurve / 2 + 50, mountain.y - 50);
     ctx.closePath();
     ctx.fill();
     mountain.y += roadSpeed - 2; // Move mountain down
@@ -99,12 +101,23 @@ function drawCar() {
 
 // Update car position
 function updateCar() {
-  const roadX = canvas.width / 2 - roadWidth / 2;
+  const roadX = (canvas.width / 2 - roadWidth / 2) + roadCurve;
   if (controls.left && carX > roadX) {
     carX -= 5;
   }
   if (controls.right && carX < roadX + roadWidth - carWidth) {
     carX += 5;
+  }
+}
+
+// Update road curvature
+function updateRoadCurvature() {
+  // Gradually change the road curve to create a winding effect
+  roadCurve += curveDirection * 1.5;
+
+  // Change direction when road curve limit is reached
+  if (roadCurve > 100 || roadCurve < -100) {
+    curveDirection *= -1;
   }
 }
 
@@ -116,6 +129,7 @@ function gameLoop() {
   drawRoad();
   generateScenery();
   drawScenery();
+  updateRoadCurvature(); // Update road curve for a winding effect
   updateCar();
   drawCar();
 
